@@ -1,0 +1,105 @@
+#!/bin/bash
+# SSHFS Quick Mount Script
+# Usage: ./sshfs halllo-max@172.18.198.243:~/projects ~/projects/remote-matrix [options]
+
+set -e
+
+# Default options
+SSH_KEY="~/.ssh/id_rsa"
+RECONNECT="-o reconnect"
+SERVER_ALIVE_INTERVAL="-o ServerAliveInterval=30"
+SSH_PORT=""
+
+# Parse arguments
+REMOTE=""
+LOCAL_PATH=""
+OPTIONS=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -o)
+            OPTIONS+=("$2")
+            shift 2
+            ;;
+        -i)
+            SSH_KEY="$2"
+            shift 2
+            ;;
+        -p)
+            SSH_PORT="$2"
+            shift 2
+            ;;
+        *)
+            if [[ -z "$REMOTE" ]]; then
+                REMOTE="$1"
+            elif [[ -z "$LOCAL_PATH" ]]; then
+                LOCAL_PATH="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Check arguments
+if [[ -z "$REMOTE" ]] || [[ -z "$LOCAL_PATH" ]]; then
+    echo "SSHFS Quick Mount"
+    echo ""
+    echo "Usage:"
+    echo "  ./sshfs <user@host:remote_path> <local_path> [options]"
+    echo ""
+    echo "Examples:"
+    echo "  ./sshfs ubuntu@172.18.198.243:~/projects ~/projects/remote-machine1 \\"
+    echo "    -o IdentityFile=~/.ssh/id_rsa \\"
+    echo "    -o reconnect \\"
+    echo "    -o ServerAliveInterval=30"
+    echo ""
+    echo "  ./sshfs ubuntu@172.18.166.57:~/projects ~/projects/remote-machine2 \\"
+    echo "    -p 55900 \\"
+    echo "    -i ~/.ssh/id_rsa"
+    echo ""
+    exit 1
+fi
+
+# Parse remote (user@host:path)
+if [[ "$REMOTE" == *@*:* ]]; then
+    USER_HOST="${REMOTE%%:*}"
+    REMOTE_PATH="${REMOTE#*:}"
+
+    if [[ "$USER_HOST" == *@* ]]; then
+        USER="${USER_HOST%%@*}"
+        HOST="${USER_HOST#*@}"
+    else
+        USER="$USER_HOST"
+        HOST=""
+    fi
+else
+    echo "Error: Remote must be in format user@host:path"
+    exit 1
+fi
+
+# Build sshfs command
+SSHFS_OPTS="-o IdentityFile=$SSH_KEY $RECONNECT $SERVER_ALIVE_INTERVAL"
+
+# Add port if specified
+if [[ -n "$SSH_PORT" ]]; then
+    SSHFS_OPTS="$SSHFS_OPTS -p $SSH_PORT"
+fi
+
+# Add custom options
+for opt in "${OPTIONS[@]}"; do
+    SSHFS_OPTS="$SSHFS_OPTS -o $opt"
+done
+
+# Create local directory if it doesn't exist
+mkdir -p "$LOCAL_PATH"
+
+# Build full remote path
+REMOTE_FULL="$USER@$HOST:$REMOTE_PATH"
+
+echo "Mounting $REMOTE_FULL to $LOCAL_PATH..."
+echo "Command: sshfs $REMOTE_FULL $LOCAL_PATH $SSHFS_OPTS"
+
+# Execute mount
+sshfs "$REMOTE_FULL" "$LOCAL_PATH" $SSHFS_OPTS
+
+echo "✓ Mounted successfully"

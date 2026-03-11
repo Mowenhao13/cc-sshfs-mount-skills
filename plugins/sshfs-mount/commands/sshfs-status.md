@@ -9,16 +9,17 @@ description: 显示 SSHFS 挂载状态 - 检查所有远程目录的挂载情况
 
 ## 执行方式
 
-运行以下命令：
+在插件目录中运行：
 
 ```bash
+cd ~/projects/sshfs-mount/plugins/sshfs-mount
 python3 lib/sshfs_mount.py status
 ```
 
-或直接使用：
+或使用全局命令（安装后）：
 
 ```bash
-./bin/sshfs-mount status
+sshfs-mount status
 ```
 
 ## 输出示例

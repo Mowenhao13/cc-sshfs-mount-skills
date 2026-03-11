@@ -9,16 +9,17 @@ description: 挂载所有 SSHFS 远程目录
 
 ## 执行方式
 
-运行以下命令：
+在插件目录中运行：
 
 ```bash
+cd ~/projects/sshfs-mount/plugins/sshfs-mount
 python3 lib/sshfs_mount.py mount -v
 ```
 
-或直接使用：
+或使用全局命令（安装后）：
 
 ```bash
-./bin/sshfs-mount mount -v
+sshfs-mount mount -v
 ```
 
 ## 输出示例

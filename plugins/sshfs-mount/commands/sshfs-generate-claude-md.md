@@ -12,10 +12,17 @@ description: 为已挂载的 SSHFS 远程目录生成 CLAUDE.md 文件
 
 ## 执行方式
 
-运行以下命令：
+在插件目录中运行：
 
 ```bash
+cd ~/projects/sshfs-mount/plugins/sshfs-mount
 python3 lib/generate_claude_md.py generate-all
+```
+
+或使用全局命令（安装后）：
+
+```bash
+sshfs-mount generate-claude-md
 ```
 
 ## 输出示例

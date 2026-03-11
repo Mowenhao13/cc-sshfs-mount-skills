@@ -147,14 +147,33 @@ def build_sshfs_command(remote: dict, local_root: Path) -> tuple:
 
 
 def check_mount_status(mount_point: Path) -> bool:
-    """Check if a path is mounted."""
+    """Check if a path is mounted and accessible."""
+    # First check if mount point exists in mount table
     try:
         result = subprocess.run(
             ["mount"],
             capture_output=True,
             text=True
         )
-        return str(mount_point) in result.stdout
+        if str(mount_point) not in result.stdout:
+            return False
+    except Exception:
+        return False
+
+    # Additional check: try to access the directory
+    # This detects stale mounts where mount table shows it but directory is inaccessible
+    try:
+        # Try to list the directory with timeout
+        result = subprocess.run(
+            ["ls", str(mount_point)],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        # If ls fails with "Device not configured" or similar, mount is stale
+        return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
     except Exception:
         return False
 

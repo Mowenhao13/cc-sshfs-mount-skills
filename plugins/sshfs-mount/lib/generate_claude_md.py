@@ -14,9 +14,24 @@ sys.path.insert(0, str(Path(__file__).parent))
 from sshfs_mount import load_config, expand_path, check_mount_status
 
 
-def generate_claude_md(mount_point: Path, ssh_host: str, remote_name: str) -> None:
-    """Generate CLAUDE.md file for a remote mount."""
+def generate_claude_md(mount_point: Path, ssh_host: str, remote_name: str, force: bool = False) -> bool:
+    """Generate CLAUDE.md file for a remote mount.
+
+    Args:
+        mount_point: The mount point directory
+        ssh_host: SSH host string
+        remote_name: Remote name
+        force: If True, overwrite existing file. If False, skip if exists.
+
+    Returns:
+        True if file was generated/updated, False if skipped
+    """
     claude_md = mount_point / "CLAUDE.md"
+
+    # Check if file already exists
+    if claude_md.exists() and not force:
+        print(f"  ⚠ Skipping {remote_name}: CLAUDE.md already exists (use --force to overwrite)")
+        return False
 
     content = f'''# CLAUDE.md
 
@@ -61,11 +76,19 @@ ssh {ssh_host} "cd ~/projects/my-repo && python train.py"
     with open(claude_md, 'w') as f:
         f.write(content)
 
-    print(f"Generated {claude_md}")
+    if claude_md.exists():
+        print(f"  ✓ Overwritten {remote_name} (CLAUDE.md already existed)")
+    else:
+        print(f"  ✓ Generated {remote_name}")
+    return True
 
 
-def generate_all() -> None:
-    """Generate CLAUDE.md for all mounted remotes."""
+def generate_all(force: bool = False) -> None:
+    """Generate CLAUDE.md for all mounted remotes.
+
+    Args:
+        force: If True, overwrite existing files. If False, skip existing files.
+    """
     config = load_config()
     local_root = expand_path(config.get("local_root", "~/projects"))
     remotes = config.get("remotes", [])
@@ -74,7 +97,11 @@ def generate_all() -> None:
         print("No remotes configured.")
         return
 
-    print(f"Generating CLAUDE.md files for {len(remotes)} remote(s)...\n")
+    if force:
+        print(f"Generating CLAUDE.md files for {len(remotes)} remote(s)... (forcing overwrite)\n")
+    else:
+        print(f"Generating CLAUDE.md files for {len(remotes)} remote(s)...\n")
+        print("  Tip: Use --force to overwrite existing CLAUDE.md files\n")
 
     for remote in remotes:
         name = remote.get("name", "unknown")
@@ -88,10 +115,7 @@ def generate_all() -> None:
             continue
 
         # Generate CLAUDE.md
-        generate_claude_md(mount_point, host, name)
-        print(f"  ✓ Generated for {name}")
-
-    print("\nDone.")
+        generate_claude_md(mount_point, host, name, force)
 
 
 def check_current_directory() -> None:
@@ -130,15 +154,19 @@ def check_current_directory() -> None:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: generate-claude-md {check|generate|generate-all}")
+        print("Usage: generate-claude-md {check|generate|generate-all} [--force]")
         print()
         print("Commands:")
         print("  check         Check if current directory is SSHFS mount")
         print("  generate      Generate CLAUDE.md for specific mount")
         print("  generate-all  Generate CLAUDE.md for all mounted remotes")
+        print()
+        print("Options:")
+        print("  --force       Overwrite existing CLAUDE.md files (default: skip existing)")
         sys.exit(1)
 
     command = sys.argv[1]
+    force = "--force" in sys.argv
 
     if command == "check":
         check_current_directory()
@@ -152,10 +180,10 @@ def main():
         ssh_host = sys.argv[3]
         remote_name = sys.argv[4]
 
-        generate_claude_md(mount_point, ssh_host, remote_name)
+        generate_claude_md(mount_point, ssh_host, remote_name, force)
 
     elif command == "generate-all":
-        generate_all()
+        generate_all(force)
 
     else:
         print(f"Unknown command: {command}")

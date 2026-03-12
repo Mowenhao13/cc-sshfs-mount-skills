@@ -65,6 +65,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 只为**已挂载**的远程目录生成 CLAUDE.md
 - 如果目录中已存在 CLAUDE.md，会被覆盖
+- **SSH 端口检测**：自动生成时会自动检测 SSH 配置文件（`~/.ssh/config`）中的非默认端口设置
+  - 如果主机使用非 22 端口，会在 CLAUDE.md 中添加端口配置说明
+  - 支持从 host 字符串（如 `user@host:port`）中提取端口
+  - 支持从 `~/.ssh/config` 文件中读取 Port 配置
 
 ## 相关命令
 

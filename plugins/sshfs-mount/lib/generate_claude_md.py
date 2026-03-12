@@ -14,6 +14,66 @@ sys.path.insert(0, str(Path(__file__).parent))
 from sshfs_mount import load_config, expand_path, check_mount_status
 
 
+def get_ssh_port_from_config(host: str) -> str:
+    """Get SSH port from SSH config file for a given host.
+
+    Args:
+        host: SSH host string (user@host or host:port)
+
+    Returns:
+        Port number as string, or empty string if not found or using default port 22
+    """
+    # First check if port is specified in host string (user@host:port format)
+    if ':' in host and '@' in host:
+        # Format: user@host:port
+        port_part = host.split(':')[-1]
+        if port_part.isdigit() and port_part != '22':
+            return port_part
+    elif ':' in host and '@' not in host:
+        # Format: host:port (no user)
+        port_part = host.split(':')[-1]
+        if port_part.isdigit() and port_part != '22':
+            return port_part
+
+    # Check SSH config file for port
+    ssh_config_path = Path.home() / ".ssh" / "config"
+    if not ssh_config_path.exists():
+        return ""
+
+    current_host = None
+    target_port = ""
+
+    try:
+        with open(ssh_config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+
+                if line.startswith('Host '):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        alias = parts[1]
+                        # Check if this host matches
+                        if alias == host or host.split('@')[-1].split(':')[0] == alias:
+                            current_host = alias
+                        else:
+                            current_host = None
+                    continue
+
+                if current_host and line.startswith('Port '):
+                    try:
+                        port = line.split(None, 1)[1].strip()
+                        if port != '22':
+                            target_port = port
+                    except (ValueError, IndexError):
+                        pass
+    except Exception:
+        pass
+
+    return target_port
+
+
 def generate_claude_md(mount_point: Path, ssh_host: str, remote_name: str, ssh_key: str = "~/.ssh/id_rsa", force: bool = False) -> bool:
     """Generate CLAUDE.md file for a remote mount.
 
@@ -36,6 +96,12 @@ def generate_claude_md(mount_point: Path, ssh_host: str, remote_name: str, ssh_k
 
     # Expand SSH key path for display
     ssh_key_expanded = os.path.expanduser(ssh_key)
+
+    # Get SSH port from config
+    ssh_port = get_ssh_port_from_config(ssh_host)
+    port_note = ""
+    if ssh_port:
+        port_note = f"\n### SSH 端口配置\n\n此主机使用非默认 SSH 端口 **{ssh_port}**。SSH 连接时需要指定端口：\n\n```bash\nssh -i {ssh_key_expanded} -p {ssh_port} user@host\n```\n\n或在 `~/.ssh/config` 中配置：\n\n```\nHost {ssh_host.split('@')[-1].split(':')[0]}\n    Port {ssh_port}\n```"
 
     content = f'''# CLAUDE.md
 
@@ -75,6 +141,7 @@ ssh -i {ssh_key_expanded} {ssh_host} "cd ~/projects/my-repo && python train.py"
 ```
 
 ---
+{port_note}
 '''
 
     with open(claude_md, 'w') as f:

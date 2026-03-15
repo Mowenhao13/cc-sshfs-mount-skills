@@ -120,21 +120,71 @@ def build_sshfs_command(remote: dict, local_root: Path) -> tuple:
         port = ssh_port
 
     # Build SSH options for sshfs
-    # Note: sshfs uses -o IdentityFile=xxx, not -i xxx
     ssh_identity = f"-o IdentityFile={ssh_key_expanded}"
     ssh_port_opt = f"-p {port}"
 
-    # Build sshfs -o options
-    sshfs_opts = [
-        "ServerAliveInterval=30",
-        "ServerAliveCountMax=3",
-    ]
+    # Build sshfs -o options (ordered for readability)
+    sshfs_opts = []
 
-    # Add custom options
+    # === 网络和重连选项 ===
     if options.get("reconnect", False):
         sshfs_opts.append("reconnect")
-    if "server_alive_interval" in options:
-        sshfs_opts.append(f"ServerAliveInterval={options['server_alive_interval']}")
+
+    # ServerAliveInterval: 配置优先，否则使用默认值
+    server_alive_interval = options.get("server_alive_interval", 60)
+    sshfs_opts.append(f"ServerAliveInterval={server_alive_interval}")
+
+    server_alive_count_max = options.get("server_alive_count_max", 5)
+    sshfs_opts.append(f"ServerAliveCountMax={server_alive_count_max}")
+
+    connect_timeout = options.get("connect_timeout", 30)
+    sshfs_opts.append(f"ConnectTimeout={connect_timeout}")
+
+    # === 缓存选项（关键性能参数）===
+    if options.get("cache", True):
+        sshfs_opts.append("cache=yes")
+
+    cache_timeout = options.get("cache_timeout", 300)
+    sshfs_opts.append(f"cache_timeout={cache_timeout}")
+
+    cache_stat_timeout = options.get("cache_stat_timeout", 300)
+    sshfs_opts.append(f"cache_stat_timeout={cache_stat_timeout}")
+
+    cache_link_timeout = options.get("cache_link_timeout", 300)
+    sshfs_opts.append(f"cache_link_timeout={cache_link_timeout}")
+
+    cachesize = options.get("cachesize", 1024000)
+    sshfs_opts.append(f"Cachesize={cachesize}")
+
+    # === 读取优化选项 ===
+    max_readahead = options.get("max_readahead", 65536)
+    sshfs_opts.append(f"max_readahead={max_readahead}")
+
+    if options.get("large_read", True):
+        sshfs_opts.append("large_read")
+
+    if options.get("compression", False):
+        sshfs_opts.append("compression=yes")
+    else:
+        sshfs_opts.append("compression=no")
+
+    # === 文件系统选项 ===
+    fsname = options.get("fsname", name)
+    sshfs_opts.append(f"fsname={fsname}")
+
+    if options.get("follow_symlinks", True):
+        sshfs_opts.append("follow_symlinks")
+
+    if options.get("nonempty", True):
+        sshfs_opts.append("nonempty")
+
+    if options.get("allow_other", False):
+        sshfs_opts.append("allow_other")
+
+    # === 自定义 SSH 命令 ===
+    ssh_command = options.get("ssh_command")
+    if ssh_command:
+        sshfs_opts.append(f"ssh_command={ssh_command}")
 
     # Build remote path
     remote_full = f"{user}@{hostname}:{remote_path}"

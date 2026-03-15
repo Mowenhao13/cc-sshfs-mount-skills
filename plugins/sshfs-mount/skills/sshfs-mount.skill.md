@@ -23,7 +23,9 @@ version: 1.0.0
 ### 可用命令
 - `/sshfs-mount status` - 检查所有远程目录的挂载状态
 - `/sshfs-mount mount` - 挂载所有远程目录
+- `/sshfs-mount mount <项目名称>` - 挂载指定的单个远程目录
 - `/sshfs-mount unmount` - 卸载所有远程目录
+- `/sshfs-mount unmount <项目名称>` - 卸载指定的单个远程目录
 - `/sshfs-mount init` - 运行初始化向导
 - `/sshfs-mount profile` - Profile 管理（list/switch）
 - `/sshfs-mount daemon` - 守护进程管理（start/stop/status）
@@ -41,6 +43,8 @@ version: 1.0.0
 - `/sshfs-status` - 快速检查挂载状态
 - `/sshfs-mount-all` - 快速挂载所有远程目录
 - `/sshfs-unmount-all` - 快速卸载所有远程目录
+- `/sshfs-mount-project` - 快速挂载单个远程目录
+- `/sshfs-unmount-project` - 快速卸载单个远程目录
 - `/sshfs-daemon` - 守护进程管理
 - `/sshfs-generate-claude-md` - 生成 CLAUDE.md
 
